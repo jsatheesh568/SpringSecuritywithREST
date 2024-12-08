@@ -4,6 +4,7 @@ import com.example.SercuitywithRest.Model.UserModel;
 import com.example.SercuitywithRest.Service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -66,18 +67,30 @@ public class UserControllerApi {
     Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     if (principal instanceof UserModel) {
       UserModel loggedInUser = (UserModel) principal;
+
+      // Ensure the user is an admin before updating the role
       if ("ADMIN".equals(loggedInUser.getRole())) {
-        try {
-          userService.updateUserRole(id, role);
-          return ResponseEntity.ok("User role updated successfully");
-        } catch (Exception e) {
-          return ResponseEntity.status(400).body("Error updating role: " + e.getMessage());
+        // Validate the role
+        if (role.equals("ADMIN") || role.equals("USER")) {
+          try {
+            userService.updateUserRole(id, role);
+            return ResponseEntity.ok("User role updated successfully");
+          } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error updating role: " + e.getMessage());
+          }
+        } else {
+          return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                  .body("Invalid role provided");
         }
       } else {
-        return ResponseEntity.status(403).body("Access denied");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body("Access denied");
       }
     } else {
-      return ResponseEntity.status(401).body("Access denied. Please log in.");
+      return ResponseEntity.status( HttpStatus.UNAUTHORIZED)
+              .body("Access denied. Please log in.");
     }
   }
+
 }
